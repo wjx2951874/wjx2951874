@@ -1,4 +1,4 @@
-name: Temporary Douyin Live Background Export
+name: Temporary Douyin Live Background Browser Probe
 
 on:
   pull_request:
@@ -13,9 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  export-live-backgrounds:
+  browser-probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - name: Checkout temporary branch
         uses: actions/checkout@v4
@@ -25,29 +25,25 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install conversion dependencies
+      - name: Install browser automation
         run: |
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
-          python -m pip install pillow requests gmssl
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
 
-      - name: Fetch current Live Photo capable parser
-        run: |
-          mkdir -p tmp/douyin-background-export/vendor
-          git clone --depth 1 https://github.com/DLWangSan/douyin_parse.git tmp/douyin-background-export/vendor/douyin_parse
+      - name: Parse Live Photo album through browser services
+        run: python tmp/douyin-background-export/browser_probe.py
 
-      - name: Extract ordered live photos and build Android/GIF files
-        run: python tmp/douyin-background-export/live_export.py
+      - name: Show captured files
+        if: always()
+        run: find tmp/douyin-background-export/browser_probe_output -maxdepth 3 -type f -printf "%p %s bytes\n" | sort || true
 
-      - name: Show generated files
-        run: find tmp/douyin-background-export/live_output -maxdepth 3 -type f -printf "%p %s bytes\n" | sort
-
-      - name: Upload completed live-photo package
+      - name: Upload browser probe data
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: douyin-china-live-backgrounds-complete
-          path: tmp/douyin-background-export/live_output/**
-          if-no-files-found: error
+          name: douyin-live-browser-probe
+          path: tmp/douyin-background-export/browser_probe_output/**
+          if-no-files-found: warn
           compression-level: 0
           retention-days: 1
