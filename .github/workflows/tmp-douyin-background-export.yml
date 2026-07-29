@@ -34,7 +34,9 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Download all 26 items and generate Android MP4 and GIF files
-        run: python tmp/douyin-background-export/final_export.py
+        run: |
+          sed -i 's#MOBILE_NOTE_URL = f"https://m.douyin.com/share/note/{AWEME_ID}"#MOBILE_NOTE_URL = "https://v.douyin.com/-K9Bpgl1daM/"#' tmp/douyin-background-export/final_export.py
+          python tmp/douyin-background-export/final_export.py
 
       - name: Show final files
         if: always()
