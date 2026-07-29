@@ -1,0 +1,48 @@
+name: Temporary Douyin Background Export
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "tmp/douyin-background-export/**"
+      - ".github/workflows/tmp-douyin-background-export.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout temporary branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install pillow requests
+
+      - name: Download and convert the 26 assets
+        run: python tmp/douyin-background-export/export.py
+
+      - name: Show generated files
+        run: find tmp/douyin-background-export/output -maxdepth 2 -type f -printf "%p %s bytes\n" | sort
+
+      - name: Upload finished package
+        uses: actions/upload-artifact@v4
+        with:
+          name: douyin-china-backgrounds-finished
+          path: tmp/douyin-background-export/output/**
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
