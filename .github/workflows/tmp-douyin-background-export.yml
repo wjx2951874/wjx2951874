@@ -1,4 +1,4 @@
-name: Temporary Douyin Real Page Probe
+name: Temporary Douyin Final Dynamic Background Export
 
 on:
   pull_request:
@@ -13,9 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  douyin-page-probe:
+  final-export:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout temporary branch
         uses: actions/checkout@v4
@@ -25,25 +25,27 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install real browser
+      - name: Install browser and media tools
         run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
-          python -m pip install playwright
+          python -m pip install pillow requests playwright
           python -m playwright install --with-deps chromium
 
-      - name: Open Douyin work and intercept full media data
-        run: python tmp/douyin-background-export/douyin_page_probe.py
+      - name: Download all 26 items and generate Android MP4 and GIF files
+        run: python tmp/douyin-background-export/final_export.py
 
-      - name: Show captured files
+      - name: Show final files
         if: always()
-        run: find tmp/douyin-background-export/douyin_page_probe_output -maxdepth 3 -type f -printf "%p %s bytes\n" | sort || true
+        run: find tmp/douyin-background-export/final_output -maxdepth 3 -type f -printf "%p %s bytes\n" | sort || true
 
-      - name: Upload captured Douyin data
+      - name: Upload complete finished package
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: douyin-real-page-data
-          path: tmp/douyin-background-export/douyin_page_probe_output/**
-          if-no-files-found: warn
+          name: douyin-china-dynamic-backgrounds-final
+          path: tmp/douyin-background-export/final_output/**
+          if-no-files-found: error
           compression-level: 0
           retention-days: 1
