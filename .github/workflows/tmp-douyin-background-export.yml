@@ -1,4 +1,4 @@
-name: Temporary Douyin Live API Probe
+name: Temporary Douyin Real Page Probe
 
 on:
   pull_request:
@@ -13,45 +13,37 @@ permissions:
   contents: read
 
 jobs:
-  api-probe:
+  douyin-page-probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
     steps:
       - name: Checkout temporary branch
         uses: actions/checkout@v4
 
-      - name: Call Live Photo parser API directly
-        run: |
-          set -euxo pipefail
-          mkdir -p tmp/douyin-background-export/api_probe_output
-          curl --fail-with-body --location --silent --show-error \
-            --dump-header tmp/douyin-background-export/api_probe_output/headers.txt \
-            --output tmp/douyin-background-export/api_probe_output/response.json \
-            --get \
-            --data-urlencode 'url=https://v.douyin.com/-K9Bpgl1daM/' \
-            --header 'Accept: application/json, text/plain, */*' \
-            --header 'Referer: https://parse.ideaflow.top/' \
-            --header 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36' \
-            'https://parse.ideaflow.top/video/share/url/parse'
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          p = Path('tmp/douyin-background-export/api_probe_output/response.json')
-          print('response bytes:', p.stat().st_size)
-          data = json.loads(p.read_text(encoding='utf-8'))
-          Path('tmp/douyin-background-export/api_probe_output/response.pretty.json').write_text(
-              json.dumps(data, ensure_ascii=False, indent=2), encoding='utf-8'
-          )
-          print('top-level:', type(data).__name__, list(data) if isinstance(data, dict) else len(data))
-          print(json.dumps(data, ensure_ascii=False)[:5000])
-          PY
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-      - name: Upload parser response
+      - name: Install real browser
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Open Douyin work and intercept full media data
+        run: python tmp/douyin-background-export/douyin_page_probe.py
+
+      - name: Show captured files
+        if: always()
+        run: find tmp/douyin-background-export/douyin_page_probe_output -maxdepth 3 -type f -printf "%p %s bytes\n" | sort || true
+
+      - name: Upload captured Douyin data
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: douyin-live-api-response
-          path: tmp/douyin-background-export/api_probe_output/**
-          if-no-files-found: error
+          name: douyin-real-page-data
+          path: tmp/douyin-background-export/douyin_page_probe_output/**
+          if-no-files-found: warn
           compression-level: 0
           retention-days: 1
