@@ -1,4 +1,4 @@
-name: Temporary Douyin Background Export
+name: Temporary Douyin Live Background Export
 
 on:
   pull_request:
@@ -13,9 +13,9 @@ permissions:
   contents: read
 
 jobs:
-  export:
+  export-live-backgrounds:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 45
     steps:
       - name: Checkout temporary branch
         uses: actions/checkout@v4
@@ -25,24 +25,29 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install conversion dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
           python -m pip install --upgrade pip
-          python -m pip install pillow requests
+          python -m pip install pillow requests gmssl
 
-      - name: Download and convert the 26 assets
-        run: python tmp/douyin-background-export/export.py
+      - name: Fetch current Live Photo capable parser
+        run: |
+          mkdir -p tmp/douyin-background-export/vendor
+          git clone --depth 1 https://github.com/DLWangSan/douyin_parse.git tmp/douyin-background-export/vendor/douyin_parse
+
+      - name: Extract ordered live photos and build Android/GIF files
+        run: python tmp/douyin-background-export/live_export.py
 
       - name: Show generated files
-        run: find tmp/douyin-background-export/output -maxdepth 2 -type f -printf "%p %s bytes\n" | sort
+        run: find tmp/douyin-background-export/live_output -maxdepth 3 -type f -printf "%p %s bytes\n" | sort
 
-      - name: Upload finished package
+      - name: Upload completed live-photo package
         uses: actions/upload-artifact@v4
         with:
-          name: douyin-china-backgrounds-finished
-          path: tmp/douyin-background-export/output/**
+          name: douyin-china-live-backgrounds-complete
+          path: tmp/douyin-background-export/live_output/**
           if-no-files-found: error
           compression-level: 0
           retention-days: 1
