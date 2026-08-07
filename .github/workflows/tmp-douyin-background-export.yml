@@ -1,0 +1,53 @@
+name: Temporary Douyin Final Dynamic Background Export
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "tmp/douyin-background-export/**"
+      - ".github/workflows/tmp-douyin-background-export.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  final-export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout temporary branch
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install browser and media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          python -m pip install --upgrade pip
+          python -m pip install pillow requests playwright
+          python -m playwright install --with-deps chromium
+
+      - name: Download all 26 items and generate Android MP4 and GIF files
+        run: |
+          sed -i 's#MOBILE_NOTE_URL = f"https://m.douyin.com/share/note/{AWEME_ID}"#MOBILE_NOTE_URL = "https://v.douyin.com/-K9Bpgl1daM/"#' tmp/douyin-background-export/final_export.py
+          python tmp/douyin-background-export/final_export.py
+
+      - name: Show final files
+        if: always()
+        run: find tmp/douyin-background-export/final_output -maxdepth 3 -type f -printf "%p %s bytes\n" | sort || true
+
+      - name: Upload complete finished package
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: douyin-china-dynamic-backgrounds-final
+          path: tmp/douyin-background-export/final_output/**
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1
